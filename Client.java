@@ -24,12 +24,12 @@ import net.miginfocom.swing.MigLayout;
 
 /**
  *
- * @author Taylor
+ * @author Taylor and Jeremiah
  */
 public class Client extends JPanel
 {
     JLabel userL = new JLabel("User Name");
-    JLabel hostL = new JLabel("Hostname");
+    JLabel hostL = new JLabel("Host Name");
     JLabel portL = new JLabel("Port Number");
     JTextField user = new JTextField(5);
     JTextField host = new JTextField(5);
@@ -63,8 +63,15 @@ public class Client extends JPanel
         setLayout(new MigLayout("","[grow]15",""));
         guiFunc();
         login.addActionListener(new LoginListener());
+        login.addKeyListener(new LoginListener());
         display.setEditable(false);
         enterKey.addActionListener(new EnterListener());
+        enterKey.addKeyListener(new EnterListener());
+        cmdLine.addKeyListener(new EnterListener());
+        user.addKeyListener(new LoginListener());
+        host.addKeyListener(new LoginListener());
+        port.addKeyListener(new LoginListener());
+        
         user.setToolTipText("Type your Name");
         host.setToolTipText("Type in Server Address");
         port.setToolTipText("Type in the port #");
@@ -125,31 +132,156 @@ public class Client extends JPanel
             
             String cTag = "\nClient> ";
             String uTag = "\n" + userName + "> ";
+            String sTag = "\nServer> ";
+            String aTag = "\nAdmin> ";
             
             if(tag.equalsIgnoreCase("client"))
                 display.append(cTag + message);
             else if(tag.equalsIgnoreCase("user") || tag.equalsIgnoreCase("username"))
                 display.append(uTag + message);
+            else if(tag.equalsIgnoreCase("server"))
+                display.append(sTag + message);
+            else if(tag.equalsIgnoreCase("admin"))
+                display.append(aTag + message);
             
         }//end append() method
         
-        public ObjectInputStream getIn()
-        {
-            return in;
-        }//end getIn() method
+//        public ObjectInputStream getIn()
+//        {
+//            return in;
+//        }//end getIn() method
+//        
+//        public ObjectOutputStream getOut()
+//        {
+//            return out;
+//        }//end getIn() method
         
-        public ObjectOutputStream getOut()
+//////////////////////////////////////////////////////////////////////////////
+        
+        /**
+         * The technical "run" method for Client.java.
+         */
+        public void clientThread(int portNumber)
         {
-            return out;
-        }//end getIn() method
+            try
+            {
+                
+                socketRequested = new Socket(hostName, portNumber);
+                
+                //Connection now is set.
+                append("client", "Connection Successful. " + userName 
+                        + " has logged in.");
+                
+                
+                
+                //get output stream
+                out = new ObjectOutputStream(socketRequested.getOutputStream());
+                //flush output stream to refresh data flow.
+                out.flush();
+                //get input stream
+                in = new ObjectInputStream(socketRequested.getInputStream());
+                
+//                try {
+//                    append("server", in.readObject().toString());
+//                } catch (IOException ex) {
+//                    Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+//                } catch (ClassNotFoundException ex) 
+//                {
+//                    System.out.println("clientThread() append fail. Class not found exception thrown.");
+//                    Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+//                }
+                
+            }//end try
+            catch(IOException ex)
+            {
+                System.err.println("The user tried to enter an unknown host. "
+                        + "This threw an UnknownHostException. See the following "
+                        + "stack trace if needed: \n");
+                append("client", "Unknown Host. Please review your login data and"
+                        + " try again.");
+                Logger.getLogger(Client.class.getName()).log(Level.WARNING, null, ex);
+            
+            }//end catch
+            
+            do
+            {
+                try 
+                {                
+                    inMessage = in.readObject().toString();
+                    
+                    System.out.println("inMessage: " + inMessage);
+                    
+                    if(in != null)
+                        System.out.println("in: ain't null.");
+                    
+                    append("server", inMessage);
+                    
+                    //If client exited disconnected from server
+                    if(inMessage.equals("--exit"))
+                        loggedIn = 0; //set logged in as zero. (Not logged in.)
+                    
+                }//end try
+                catch (IOException ex) 
+                {
+                    Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+                }//end catch
+                catch (ClassNotFoundException ex)
+                {
+                    Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+                }//end catch
+                
+            }//end do
+            while(loggedIn==1);
+            
+        }//end clientThread();
     
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
     
-    private class EnterListener implements ActionListener 
+    /**
+     * 
+     */
+    private class EnterListener implements ActionListener, KeyListener 
     {
         @Override
         public void actionPerformed(ActionEvent event)
+        {
+            
+            enterAction();
+            
+        }//end actionPerformed
+        
+        
+        @Override
+        public void keyPressed(KeyEvent e) 
+        {
+            if (e.getKeyCode()==KeyEvent.VK_ENTER)
+            {
+                //System.out.println("Hello");
+                enterAction();
+            }
+        }//end keyPressed() method
+        
+        @Override
+        public void keyReleased(KeyEvent arg0) 
+        {
+            
+            //Unused but required field.
+
+        }//end keyReleased() method
+
+        @Override
+        public void keyTyped(KeyEvent arg0) 
+        {
+            //Unused but required field.
+        }//end keyTyped() method
+        
+//////////////////////////////////////////////////////////////////////////////
+        
+        /**
+         * The main action performed for all overrided methods.
+         */
+        private void enterAction()
         {
             
             cmd = cmdLine.getText();
@@ -162,14 +294,20 @@ public class Client extends JPanel
             if(cmd.equalsIgnoreCase("--exit") || cmd.equalsIgnoreCase("exit"))
             {
                 messageOut(cmd);
+                loggedIn = 0;
             }//loggedIn = 0;
             else
                 messageOut(cmd);
                 
             cmdLine.setText("");
             
-        }//end actionPerformed
+        }
         
+        /**
+         * This method sends messages out to the server.
+         * 
+         * @param message 
+         */
         private void messageOut(String message)
         {
             
@@ -200,7 +338,10 @@ public class Client extends JPanel
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
     
-    private class LoginListener implements ActionListener 
+    /**
+     * 
+     */
+    private class LoginListener implements ActionListener, KeyListener
     {
 
         @Override
@@ -208,6 +349,45 @@ public class Client extends JPanel
         {
             
             System.out.println("User pressed \"Login\" button.");
+            
+            loginAction();
+            
+        }//end actionPerformed
+        
+//////////////////////////////////////////////////////////////////////////////
+        
+        @Override
+        public void keyPressed(KeyEvent e) 
+        {
+            if (e.getKeyCode()==KeyEvent.VK_ENTER)
+            {
+                
+                
+                loginAction();
+            }
+        }
+        
+        @Override
+        public void keyReleased(KeyEvent arg0) 
+        {
+            
+            //Unused but required field.
+
+        }
+
+        @Override
+        public void keyTyped(KeyEvent arg0) 
+        {
+            //Unused but required field.
+        }
+        
+//////////////////////////////////////////////////////////////////////////////
+        
+        /**
+         * The main action of the login command.
+         */
+        private void loginAction()
+        {
             
             //If the user isn't currently logged in
             if(loggedIn == 0)
@@ -239,6 +419,8 @@ public class Client extends JPanel
                         //set variable loggedIn as 1 to exit if.
                         System.out.println("User logged in sucessfully.");
                         
+                        loggedIn = 1;
+                        
                         //create thread to let client listen to host.
                         Runnable run = new Runnable() 
                         {
@@ -251,7 +433,7 @@ public class Client extends JPanel
                         ExecutorService executor = Executors.newCachedThreadPool();
                         executor.submit(run);
                         
-                        loggedIn++;
+                        //loggedIn++;
                     }
                     else
                     {
@@ -272,7 +454,7 @@ public class Client extends JPanel
             //System print loggedIn variable.
             System.out.println("loggedIn: " + loggedIn);
             
-        }//end actionPerformed
+        }//end loginAction()
         
 //////////////////////////////////////////////////////////////////////////////
         
@@ -366,49 +548,64 @@ public class Client extends JPanel
             {
                 append("client", "Notice: Only type in numbers for a port number.");
             }
-           
-            try 
-            {
+            
+            //port number needs to be from a variable marked final. Thus this.
+            final int finalPortNum = portNumber;
+            
+//            try 
+//            {
+                
+                //loggedIn = true;
+                
+                Runnable run = new Runnable() 
+                    {
+                         public void run() 
+                         {
+                             clientThread(finalPortNum);
+                         }//end run() method
+                    };
+                    //new Thread(r).start();
+                ExecutorService executor = Executors.newCachedThreadPool();
+                executor.submit(run);
+                
                 //Create socket.
-                //NOTE: socketRequested = example's requestedSocket.
-                socketRequested = new Socket(hostName, portNumber);
+//                //NOTE: socketRequested = example's requestedSocket.
+//                socketRequested = new Socket(hostName, portNumber);
+//                
+//                //get output stream
+//                out = new ObjectOutputStream(socketRequested.getOutputStream());
+//                //flush output stream to refresh data flow.
+//                out.flush();
+//                //get input stream
+//                in = new ObjectInputStream(socketRequested.getInputStream());
                 
-                //get output stream
-                out = new ObjectOutputStream(socketRequested.getOutputStream());
-                //flush output stream to refresh data flow.
-                out.flush();
-                //get input stream
-                in = new ObjectInputStream(socketRequested.getInputStream());
                 
-                //Connection now is set.
-                append("client", "Connection Successful. " + userName 
-                        + " has logged in.");
                 
-                //all went well, set as logged in.
-                loggedIn = true;
+//            }//end try
+            
+//            catch (UnknownHostException ex) 
+//            {
+//                System.err.println("The user tried to enter an unknown host. "
+//                        + "This threw an UnknownHostException. See the following "
+//                        + "stack trace if needed: \n");
+//                append("client", "Unknown Host. Please review your login data and"
+//                        + " try again.");
+//                Logger.getLogger(Client.class.getName()).log(Level.WARNING, null, ex);
+//            }//end catch
+//            
+//            
+//            
+//            catch (IOException ex) 
+//            {
+//                System.err.println("It seems an IO exception occoured.");
+//                Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+//                append("client", "Connection Refused. Please review your port "
+//                        + "number and host name.");
+//            }//end catch
+            
+            //all went well, set as logged in.
+            loggedIn = true;// <<Need to fix this.    
                 
-            }//end try
-            
-            catch (UnknownHostException ex) 
-            {
-                System.err.println("The user tried to enter an unknown host. "
-                        + "This threw an UnknownHostException. See the following "
-                        + "stack trace if needed: \n");
-                append("client", "Unknown Host. Please review your login data and"
-                        + " try again.");
-                Logger.getLogger(Client.class.getName()).log(Level.WARNING, null, ex);
-            }//end catch
-            
-            
-            
-            catch (IOException ex) 
-            {
-                System.err.println("It seems an IO exception occoured.");
-                Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-                append("client", "Connection Refused. Please review your port "
-                        + "number and host name.");
-            }//end catch
-            
             System.out.println("In method login(), loggedIn = " + loggedIn + ".");
             
             return loggedIn;
