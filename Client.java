@@ -1,17 +1,16 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package network.project1;
 
 import java.util.Calendar;
 import java.awt.event.*;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
+import java.net.ConnectException;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 //import java.util.Date;
@@ -23,11 +22,15 @@ import javax.swing.*;
 import net.miginfocom.swing.MigLayout;
 
 /**
- *
- * @author Taylor and Jeremiah
+ * The Class defining the GUI design and Client Threading.
+ * 
+ * @author Taylor   (GUI development)
+ * @author Jeremiah (major coding, GUI development)
  */
 public class Client extends JPanel
 {
+    
+    //Instance variables of labels and text fields
     JLabel userL = new JLabel("User Name");
     JLabel hostL = new JLabel("Host Name");
     JLabel portL = new JLabel("Port Number");
@@ -35,36 +38,58 @@ public class Client extends JPanel
     JTextField host = new JTextField(5);
     JTextField port = new JTextField(5);
     JTextField cmdLine = new JTextField();
+    //create instance variable of scrollable pane and display.
     JScrollPane scroll;
     JTextArea display = new JTextArea();
     
+    //create instance variable of buttons
     JButton login = new JButton("Login");
     JButton enterKey = new JButton(">>");
+    
+    //instance variables for parsing user login data later...
     String userName;
     String hostName;
     String portNum;
+    //instance variable for client command.
     String cmd;
     
+    
+    
     //The nitty-gritty:
+    
     String empty = "";
+    //Instace variable for recieving message from Server.
     String inMessage;
-    
+    //If loggedIn is 0, user isn't logged in. loggedIn = 1 for logged in.
     int loggedIn = 0;
-    
+    //the socket for the connection to server.
     Socket socketRequested;
-    ObjectInputStream in;
-    ObjectOutputStream out;
+    
+    //In receives data, out prints out data to Server.
+    BufferedReader in;
+    PrintWriter out;
  	
     
-    
+    /**
+     * Constructor for the Client class.& Used to implement the GUI.
+     */
     public Client()
     {
+        
+        //set display to scrollable plane. Set Line wrap/word wrap style
+        display.setEditable(false);
+        display.setLineWrap(false);
+        display.setWrapStyleWord(false);
         this.scroll = new JScrollPane(display);
+        
+        //set layout for class
         setLayout(new MigLayout("","[grow]15",""));
+        //create GUI
         guiFunc();
+        
+        //add listeners
         login.addActionListener(new LoginListener());
         login.addKeyListener(new LoginListener());
-        display.setEditable(false);
         enterKey.addActionListener(new EnterListener());
         enterKey.addKeyListener(new EnterListener());
         cmdLine.addKeyListener(new EnterListener());
@@ -72,30 +97,45 @@ public class Client extends JPanel
         host.addKeyListener(new LoginListener());
         port.addKeyListener(new LoginListener());
         
+        
+        
+        //set tool tips where needed.
         user.setToolTipText("Type your Name");
         host.setToolTipText("Type in Server Address");
         port.setToolTipText("Type in the port #");
         cmdLine.setToolTipText("Type your Command Arguments");
-        enterKey.setToolTipText("Enter Key");
+        enterKey.setToolTipText("Enter Message or Command");
         
-        //Note that the cTag String isn'y used here. That's due to the \n in the String.
-        display.append("Client> Please login and provide a username and valid "
+        //Opening message. Note append() isn't used here.
+        display.append("Client> Please login and provide a username, valid "
                 + "host name and port number.");
+        
+        //display first instance of menu.
+        menu();
+        
         //set user, host, and port to blank (so they aren't null).
         userName = "";
         hostName = "";
         portNum = "";
-        
         user.setText(userName);
         host.setText(hostName);
         port.setText(portNum);
         
-//        scroll.addMouseWheelListener(new MouseWhListener());
-        
     }//end Client Contructor
     
+//////////////////////////////////////////////////////////////////////////////
+    
+    /**
+     * This method incorporates the components in the project to the main
+     * JPanel.
+     * 
+     * @param none
+     * @return none
+     */
     private void guiFunc()
     {
+        
+        //add components to display
         add(userL,"span 1, growx");
         add(hostL,"span 1, growx");
         add(portL,"span 2, wrap");
@@ -106,143 +146,98 @@ public class Client extends JPanel
         add(scroll,"span 4, growx, growy, push, wrap");
         add(cmdLine, "span 3, growx, growy 50");
         add(enterKey, "span 1, w 80!, wrap");
-    }
-
-//    private static class MouseWhListener implements MouseWheelListener {
-//
-//        public void actionPerformed(ActionEvent event)
-//        {
-//            scroll.
-//        }
-//    }
-
-        /**
-         * This method appends a message to the main display of the 
-         * Client.
-         * 
-         * <p><b>KEY:</b></p>
-         * <p>type "client" to add Client's built in tag to message.</p>
-         * <p>type "user" to add user's current tag to message.</p>
-         * 
-         * @param tag name of the tag to appear on the scroll pane.
-         * @param message the message to appear in the pane.
-         */
-        private void append(String tag, String message)
-        {
-            
-            String cTag = "\nClient> ";
-            String uTag = "\n" + userName + "> ";
-            String sTag = "\nServer> ";
-            String aTag = "\nAdmin> ";
-            
-            if(tag.equalsIgnoreCase("client"))
-                display.append(cTag + message);
-            else if(tag.equalsIgnoreCase("user") || tag.equalsIgnoreCase("username"))
-                display.append(uTag + message);
-            else if(tag.equalsIgnoreCase("server"))
-                display.append(sTag + message);
-            else if(tag.equalsIgnoreCase("admin"))
-                display.append(aTag + message);
-            
-        }//end append() method
         
-//        public ObjectInputStream getIn()
-//        {
-//            return in;
-//        }//end getIn() method
-//        
-//        public ObjectOutputStream getOut()
-//        {
-//            return out;
-//        }//end getIn() method
+    }//end guifunc() method
+
+//////////////////////////////////////////////////////////////////////////////
+    
+    /**
+     * This method appends a message to the main display of the 
+     * Client.
+     * 
+     * <p><b>KEY:</b></p>
+     * <p>type "client" to add Client's built in tag to message.</p>
+     * <p>type "user" to add user's current tag to message.</p>
+     * <p>type "server" to add server tag to message.</p>
+     * <p>type "admin" to append admin tag to message.</p>
+     * <p>type "" to append nothing to a message.</p>
+     * 
+     * @param tag name of the tag to appear on the scroll pane.
+     * @param message the message to appear in the pane.
+     * @return none
+     */
+    private void append(String tag, String message)
+    {
+        
+        //These are the "tags" used to identify who is sending a message.
+        String cTag = "\nClient> ";
+        String uTag = "\n" + userName + "> ";
+        String sTag = "\nServer> ";
+        String aTag = "\nAdmin> ";
+        String bTag = "\n ";
+        
+        //append tag based on parameter. Append to "display."
+        if(tag.equalsIgnoreCase("client"))
+            display.append(cTag + message);
+        else if(tag.equalsIgnoreCase("user") || tag.equalsIgnoreCase("username"))
+            display.append(uTag + message);
+        else if(tag.equalsIgnoreCase("server"))
+            display.append(sTag + message);
+        else if(tag.equalsIgnoreCase("admin"))
+            display.append(aTag + message);
+        else if(tag.equals(empty.trim()))
+            display.append(bTag + message);
+
+    }//end append() method
         
 //////////////////////////////////////////////////////////////////////////////
+    
+    /**
+     * Appends the menu to the display.
+     * 
+     * @param none
+     * @return none
+     */
+    private void menu()
+    {
         
-        /**
-         * The technical "run" method for Client.java.
-         */
-        public void clientThread(int portNumber)
-        {
-            try
-            {
-                
-                socketRequested = new Socket(hostName, portNumber);
-                
-                //Connection now is set.
-                append("client", "Connection Successful. " + userName 
-                        + " has logged in.");
-                
-                
-                
-                //get output stream
-                out = new ObjectOutputStream(socketRequested.getOutputStream());
-                //flush output stream to refresh data flow.
-                out.flush();
-                //get input stream
-                in = new ObjectInputStream(socketRequested.getInputStream());
-                
-//                try {
-//                    append("server", in.readObject().toString());
-//                } catch (IOException ex) {
-//                    Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-//                } catch (ClassNotFoundException ex) 
-//                {
-//                    System.out.println("clientThread() append fail. Class not found exception thrown.");
-//                    Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-//                }
-                
-            }//end try
-            catch(IOException ex)
-            {
-                System.err.println("The user tried to enter an unknown host. "
-                        + "This threw an UnknownHostException. See the following "
-                        + "stack trace if needed: \n");
-                append("client", "Unknown Host. Please review your login data and"
-                        + " try again.");
-                Logger.getLogger(Client.class.getName()).log(Level.WARNING, null, ex);
-            
-            }//end catch
-            
-            do
-            {
-                try 
-                {                
-                    inMessage = in.readObject().toString();
-                    
-                    System.out.println("inMessage: " + inMessage);
-                    
-                    if(in != null)
-                        System.out.println("in: ain't null.");
-                    
-                    append("server", inMessage);
-                    
-                    //If client exited disconnected from server
-                    if(inMessage.equals("--exit"))
-                        loggedIn = 0; //set logged in as zero. (Not logged in.)
-                    
-                }//end try
-                catch (IOException ex) 
-                {
-                    Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-                }//end catch
-                catch (ClassNotFoundException ex)
-                {
-                    Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-                }//end catch
-                
-            }//end do
-            while(loggedIn==1);
-            
-        }//end clientThread();
+        //set tab constant(and tab with a skip line character)
+        final String tab = "\t\t";
+        final String nTab = "\n" + "   ";
+        //set message constant
+        final String message;
+        
+        message = nTab + "The following list of commands are available for use:"
+                + nTab + " -t, --time" + tab + "Host current Date & Time."
+                + nTab + "-u, --uptime" + tab + "Host Uptime."
+                + nTab + "-m, --memory" + tab + "Host Memory"
+                + nTab + "-n, --netstat" + tab + "Host Netstat"
+                + nTab + "-c c, --connection close" + "\t" + "Log out from server."
+                + nTab + "-c, --close" + tab + "Close Client GUI."
+                + "\n";
+        
+        System.out.println(message);
+        
+        //append menu to display
+        append("", message);
+        
+    }//end menu()
+    
     
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
     
     /**
-     * 
+     * This subclass defines what the ">>" button does
      */
     private class EnterListener implements ActionListener, KeyListener 
     {
+        
+        /**
+         * Defines the action taken.
+         * 
+         * @param event unused
+         */
         @Override
         public void actionPerformed(ActionEvent event)
         {
@@ -251,7 +246,13 @@ public class Client extends JPanel
             
         }//end actionPerformed
         
+//////////////////////////////////////////////////////////////////////////////
         
+        /**
+         * Defines the action taken when the "Enter" key is pressed.
+         * 
+         * @param e 
+         */
         @Override
         public void keyPressed(KeyEvent e) 
         {
@@ -262,6 +263,13 @@ public class Client extends JPanel
             }
         }//end keyPressed() method
         
+//////////////////////////////////////////////////////////////////////////////
+        
+        /**
+         * Unused but required.
+         * 
+         * @param arg0 
+         */
         @Override
         public void keyReleased(KeyEvent arg0) 
         {
@@ -269,7 +277,14 @@ public class Client extends JPanel
             //Unused but required field.
 
         }//end keyReleased() method
-
+        
+//////////////////////////////////////////////////////////////////////////////
+        
+        /**
+         * Unused but required.
+         * 
+         * @param arg0 
+         */
         @Override
         public void keyTyped(KeyEvent arg0) 
         {
@@ -284,52 +299,66 @@ public class Client extends JPanel
         private void enterAction()
         {
             
+            //get user command
             cmd = cmdLine.getText();
-            display.setLineWrap(false);
-            display.setWrapStyleWord(false);
-            //display.append(cmd + " " + userName + " " + hostName + " " + portNum + "\n");
             
-            if(cmd.equalsIgnoreCase("--close") || cmd.equalsIgnoreCase("close"))
+            //Now, based on user command, something happens.
+            
+            if(cmd.equalsIgnoreCase("--close") || cmd.equalsIgnoreCase("-c"))
                 System.exit(1);
-            if(cmd.equalsIgnoreCase("--exit") || cmd.equalsIgnoreCase("exit"))
+            //log out algorithm:
+            else if((cmd.equalsIgnoreCase("--connection close") 
+                    || cmd.equalsIgnoreCase("-c c"))
+                    && loggedIn == 1)
             {
                 messageOut(cmd);
                 loggedIn = 0;
-            }//loggedIn = 0;
-            else
+                append("client", "You have successfully logged out from the "
+                        + "server.");
+            }//end else if
+            
+            
+            //if logged in
+            if(loggedIn != 0)
+            {
                 messageOut(cmd);
-                
+                menu();
+            }//end if
+            else if(loggedIn == 0)
+            {
+                append("user", cmd);
+                menu();
+            }//end else if
+            
+            //set the cmdLine to blank, to remove old command.
             cmdLine.setText("");
             
-        }
+        }//end EnterAction() method
+        
+//////////////////////////////////////////////////////////////////////////////
         
         /**
-         * This method sends messages out to the server.
+         * This method sends messages out to the server and appends 
+         * them to the display.
          * 
-         * @param message 
+         * @param message the command written  by the user
+         * @return none
          */
         private void messageOut(String message)
         {
             
-            try 
+            if(out != null)
             {
-                if(out != null)
-                {
-                    //write message out
-                    out.writeObject(message);
-                    //flush output stream
-                    out.flush();
-                }//end if
-                //append message
-                System.out.println(userName + "> " + message);
-                append("user", message);
-                
-            }//end try
+                //write message out
+                out.println(message);
+                //flush output stream
+                out.flush();
+            }//end if
             
-            catch (IOException ex)
-            {
-                Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-            }//end catch
+            //Debug message:
+            System.out.println(userName + "> " + message);
+            //append message
+            append("user", message);
             
         }//end messageOut() method
         
@@ -339,11 +368,19 @@ public class Client extends JPanel
 //////////////////////////////////////////////////////////////////////////////
     
     /**
-     * 
+     * Subclass defines the login operation of Client.
      */
     private class LoginListener implements ActionListener, KeyListener
     {
-
+        
+        //boolean clientThreadConnected = false;
+        
+        /**
+         * Defines default login action.
+         * 
+         * @param event 
+         * @return none
+         */
         @Override
         public void actionPerformed(ActionEvent event)
         {
@@ -356,6 +393,12 @@ public class Client extends JPanel
         
 //////////////////////////////////////////////////////////////////////////////
         
+        /**
+         * Defines the default Enter key press action.
+         * 
+         * @param e 
+         * @return none
+         */
         @Override
         public void keyPressed(KeyEvent e) 
         {
@@ -367,16 +410,32 @@ public class Client extends JPanel
             }
         }
         
+//////////////////////////////////////////////////////////////////////////////
+        
+        /**
+         * Unused method but required.
+         * 
+         * @param e 
+         * @return none
+         */
         @Override
-        public void keyReleased(KeyEvent arg0) 
+        public void keyReleased(KeyEvent e) 
         {
             
             //Unused but required field.
 
-        }
-
+        }//end keyRelease() overrided method
+        
+//////////////////////////////////////////////////////////////////////////////
+        
+        /**
+         * Unused method but required.
+         * 
+         * @param e 
+         * @return none
+         */
         @Override
-        public void keyTyped(KeyEvent arg0) 
+        public void keyTyped(KeyEvent e) 
         {
             //Unused but required field.
         }
@@ -385,6 +444,9 @@ public class Client extends JPanel
         
         /**
          * The main action of the login command.
+         * 
+         * @param none
+         * @return none
          */
         private void loginAction()
         {
@@ -397,53 +459,66 @@ public class Client extends JPanel
                 
                 //if both host name and port number are empty:
                 if(hostName.matches(empty.trim()) && portNum.matches(empty.trim()))
-                append("client", "Host Name and Port Number are missing. "
-                        + "Please validate and try again.");
+                {
+                    append("client", "Host Name and Port Number are missing. "
+                            + "Please validate and try again.");
+                    
+                    //set fields to empty in case someone put "        " in it.
+                    host.setText("");
+                    port.setText("");
+                
+                }//end if
+                
                 //if only host name is empty:
                 else if(hostName.matches(empty.trim()))
+                {
+                    //append message saying so.
                     append("client", "Host Name is missing. "
                         + "Please validate and try again.");
+                    
+                    //set host field to empty in case someone put spaces in it.
+                    host.setText("");
+                    
+                }//end else if
+                
                 //if only port number is empty:
                 else if(portNum.matches(empty.trim()))
+                {
+                    //append message saying so.
                     append("client", "Port Number is missing. "
                         + "Please validate and try again.");
+                    
+                    //set port field to empty in case someone put spaces in it.
+                    port.setText("");
+                }//end else if
+                
                 //if both have data entered into them:
                 else
                 {
                     
-                    //append("client", "Please wait. Connecting...");
-                    System.out.println("Connecting...");
-                    //try to log in. If log in returns as true:
-                    if(login() == true)
+                    //Debug message:
+                    System.out.println("Attempting Connecting...");
+                    
+                    //try to log in. 
+                    login();
+                    
+                    //If loggedIn returns as 1 (true):
+                    if(loggedIn==1)
                     {
                         //set variable loggedIn as 1 to exit if.
                         System.out.println("User logged in sucessfully.");
                         
-                        loggedIn = 1;
-                        
-                        //create thread to let client listen to host.
-                        Runnable run = new Runnable() 
-                        {
-                             public void run() 
-                             {
-                                 serverListener();
-                             }//end run() method
-                        };
-                        //new Thread(r).start();
-                        ExecutorService executor = Executors.newCachedThreadPool();
-                        executor.submit(run);
-                        
-                        //loggedIn++;
-                    }
+                    }//end if
                     else
                     {
                         //Not logged in.
-                    }//end else
+                    }//end inner else
                     
                 }//end else
                 
             }//end if
-            //If the user is already successfully loged in and attempts to relogin:
+            
+            //If the user is already successfully logged in and attempts to relogin:
             else if(loggedIn==1)
             {
                 append("client", userName + ", you're already logged in.");
@@ -459,33 +534,11 @@ public class Client extends JPanel
 //////////////////////////////////////////////////////////////////////////////
         
         /**
-         * This method receives input from Server.
-         */
-        private void serverListener()
-        {
-            try 
-            {
-                inMessage = in.readObject().toString();
-            }//end try
-            catch (IOException ex) 
-            {
-                System.err.println("I/O error in serverListener() method.");
-                Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-            }//end catch
-            catch (ClassNotFoundException ex) 
-            {
-                System.err.println("ClassNotFoundException error in "
-                        + "serverListener() method.");
-                Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-            }//end catch
-            
-        }//end run() method
-        
-//////////////////////////////////////////////////////////////////////////////
-        
-        /**
          * Gets user inputted data for user name, host name and port 
          * number.
+         * 
+         * @param none
+         * @return none
          */
         private void parseUserLoginData()
         {
@@ -496,7 +549,7 @@ public class Client extends JPanel
             portNum = port.getText().trim();
             
             //If the user din't enter a username, set as Anon:
-            if(userName.matches(empty))//(empty.trim())
+            if(userName.matches(empty.trim()))//(empty.trim())
                 makeAnonUserName();
             
         }//end parseData() method
@@ -518,6 +571,7 @@ public class Client extends JPanel
             //set anon using this info.
             userName = "Anonymous" + format1.format(calen.getTime());
             
+            //Debug message: user name, host name, port number.
             System.out.println("Login info provided:\n\tUser Name: " + userName 
                     + " \n\tHost Name: " + hostName + "\n\tPort Number: " 
                     + portNum);
@@ -529,12 +583,13 @@ public class Client extends JPanel
         /**
          * This method connects to server using the entered login 
          * criteria.
+         * 
+         * @param none
+         * @return variable stating if the user logged in successfully.
          */
-        private boolean login()
+        private void login()
         {
             
-            //set user to not logged in as default
-            boolean loggedIn = false;
             
             //NOTE: the actual port num is checked before this method, so its valid to set the number here to 0.
             int portNumber = 0;
@@ -549,70 +604,146 @@ public class Client extends JPanel
                 append("client", "Notice: Only type in numbers for a port number.");
             }
             
-            //port number needs to be from a variable marked final. Thus this.
+            //port number needs to be from a variable marked final. Thus:
             final int finalPortNum = portNumber;
             
-//            try 
-//            {
-                
-                //loggedIn = true;
-                
-                Runnable run = new Runnable() 
-                    {
-                         public void run() 
-                         {
-                             clientThread(finalPortNum);
-                         }//end run() method
-                    };
-                    //new Thread(r).start();
-                ExecutorService executor = Executors.newCachedThreadPool();
-                executor.submit(run);
-                
-                //Create socket.
-//                //NOTE: socketRequested = example's requestedSocket.
-//                socketRequested = new Socket(hostName, portNumber);
-//                
-//                //get output stream
-//                out = new ObjectOutputStream(socketRequested.getOutputStream());
-//                //flush output stream to refresh data flow.
-//                out.flush();
-//                //get input stream
-//                in = new ObjectInputStream(socketRequested.getInputStream());
-                
-                
-                
-//            }//end try
+            //make runnable instance of Client thread.
+            Runnable run = new Runnable() 
+                {
+                     public void run() 
+                     {
+                         clientThread(finalPortNum);
+                         
+                     }//end run() method
+                };
+//            new Thread(r).start();
             
-//            catch (UnknownHostException ex) 
-//            {
-//                System.err.println("The user tried to enter an unknown host. "
-//                        + "This threw an UnknownHostException. See the following "
-//                        + "stack trace if needed: \n");
-//                append("client", "Unknown Host. Please review your login data and"
-//                        + " try again.");
-//                Logger.getLogger(Client.class.getName()).log(Level.WARNING, null, ex);
-//            }//end catch
-//            
-//            
-//            
-//            catch (IOException ex) 
-//            {
-//                System.err.println("It seems an IO exception occoured.");
-//                Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-//                append("client", "Connection Refused. Please review your port "
-//                        + "number and host name.");
-//            }//end catch
-            
-            //all went well, set as logged in.
-            loggedIn = true;// <<Need to fix this.    
+            //execute the runnable
+            ExecutorService executor = Executors.newCachedThreadPool();
+            executor.submit(run);  
                 
             System.out.println("In method login(), loggedIn = " + loggedIn + ".");
             
-            return loggedIn;
             
         }//end login() method
         
+//////////////////////////////////////////////////////////////////////////////
+        
+        /**
+         * The technical "run" method for Client.java.
+         * 
+         * Note that this is run from a "Runnable" variable. Thus, everything
+         * in this method acts as though it were is a "while(true)" loop,
+         * and runs in the background of the program.
+         * 
+         * @param portNumber the port number selected by the client/user.
+         * @return none
+         */
+        private void clientThread(int portNumber)
+        {
+            try
+            {
+                
+                //try to connect
+                socketRequested = new Socket(hostName, portNumber);
+                
+                //Connection now is set.
+                append("client", "Connection Successful. " + userName 
+                        + " has logged in.");
+                
+                //set up in and out connetion
+                in = new BufferedReader(new InputStreamReader(socketRequested.getInputStream()));
+                out = new PrintWriter(socketRequested.getOutputStream());
+                
+                //flush output stream to refresh data flow.
+                out.flush();
+                
+                //at this point, the user is logged in. So:
+                loggedIn = 1;
+                
+                do
+                {
+                    try 
+                    {                
+                        //read in message from server
+                        inMessage = in.readLine();
+
+                        System.out.println("inMessage: " + inMessage);
+                        
+                        if(in != null)
+                            System.out.println("\tin: ain't null.");
+                        
+                        
+                        
+                        append("server", inMessage);
+
+                        //If client exited disconnected from server
+                        if(inMessage.equalsIgnoreCase("--connection close"))//--connection close
+                            //set logged in as zero. (Not logged in.)
+                            loggedIn = 0; 
+                        
+                        
+                    }//end try
+                    catch(SocketException se)
+                    {
+                        System.err.println("The server closed prematurely.");
+                        
+                        loggedIn=0;
+                        
+                        append("client", "The connection to the server was lost."
+                                + " Thus, you have been logged out.");
+                        
+                        Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, se);
+                    
+                    }//end SocketException catch
+                    catch (IOException ex) 
+                    {
+                        Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+                    }//end catch
+
+                }//end do
+                while(loggedIn==1);
+                
+            }//end try
+            
+            catch(ConnectException ce)
+            {
+                System.err.println("The user tried to enter an unknown port #. "
+                        + "This threw a ConnectionException. See the following "
+                        + "stack trace if needed: \n");
+                append("client", "Unknown Port Number. Please review your login data and"
+                        + " try again.");
+                Logger.getLogger(Client.class.getName()).log(Level.WARNING, null, ce);
+            }//end ConnectException catch 
+            
+            catch(IOException ex)
+            {
+                System.err.println("I/O error. The user tried to enter an unknown host. "
+                        + "This threw an UnknownHostException. See the following "
+                        + "stack trace if needed: \n");
+                append("client", "Unknown Host. Please review your login data and"
+                        + " try again.");
+                Logger.getLogger(Client.class.getName()).log(Level.WARNING, null, ex);
+            
+            } //end IOExeption catch
+            finally
+            {
+                try 
+                {
+                    //close connections
+                    in.close();
+                    out.close();
+                    socketRequested.close();
+                }//end try
+                catch (IOException ex) 
+                {
+                    Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+                }//end catch
+                
+            }//end finally
+            
+        }//end clientThread();
+        
     }//end subclass
-    
     
 }//end Client
