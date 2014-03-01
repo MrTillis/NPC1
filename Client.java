@@ -12,6 +12,7 @@ import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.CharBuffer;
 import java.text.SimpleDateFormat;
 //import java.util.Date;
 import java.util.concurrent.ExecutorService;
@@ -670,13 +671,13 @@ public class Client extends JPanel
 
                         System.out.println("inMessage: " + inMessage);
                         
-                        if(in != null)
-                            System.out.println("\tin: ain't null.");
-                        
+//                        if(in != null)
+//                            System.out.println("\tin: ain't null.");
                         
                         
                         append("server", inMessage);
-
+                        
+                        
                         //If client exited disconnected from server
                         if(inMessage.equalsIgnoreCase("--connection close"))//--connection close
                             //set logged in as zero. (Not logged in.)
