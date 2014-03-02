@@ -176,6 +176,7 @@ public class Client extends JPanel
         String sTag = "\nServer> ";
         String aTag = "\nAdmin> ";
         String bTag = "\n ";
+        String tTag = "\n\t";
         
         //append tag based on parameter. Append to "display."
         if(tag.equalsIgnoreCase("client"))
@@ -186,8 +187,11 @@ public class Client extends JPanel
             display.append(sTag + message);
         else if(tag.equalsIgnoreCase("admin"))
             display.append(aTag + message);
+        else if(tag.equalsIgnoreCase("tab"))
+            display.append(tTag + message);
         else if(tag.equals(empty.trim()))
             display.append(bTag + message);
+        
 
     }//end append() method
         
@@ -213,6 +217,7 @@ public class Client extends JPanel
                 + nTab + "-u, --uptime" + tab + "Host Uptime."
                 + nTab + "-m, --memory" + tab + "Host Memory"
                 + nTab + "-n, --netstat" + tab + "Host Netstat"
+                + nTab + "-p, --processes" + "\t" + "Host Running Processes"
                 + nTab + "-c c, --connection close" + "\t" + "Log out from server."
                 + nTab + "-c, --close" + tab + "Close Client GUI."
                 + "\n";
