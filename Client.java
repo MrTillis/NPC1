@@ -39,7 +39,7 @@ public class Client extends JPanel
     JTextField host = new JTextField(5);
     JTextField port = new JTextField(5);
     JTextField cmdLine = new JTextField();
-    //create instance variable of scrollable pane and display.
+    //create instance variable of scrollable pane and display. 
     JScrollPane scroll;
     JTextArea display = new JTextArea();
     
