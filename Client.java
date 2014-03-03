@@ -31,7 +31,7 @@ import net.miginfocom.swing.MigLayout;
 public class Client extends JPanel
 {
     
-    //Instance variables of labels and text fields
+    //Instance variables of labels and text fields 
     JLabel userL = new JLabel("User Name");
     JLabel hostL = new JLabel("Host Name");
     JLabel portL = new JLabel("Port Number");
